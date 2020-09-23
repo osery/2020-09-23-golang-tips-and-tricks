@@ -1,0 +1,8 @@
+$ go mod init github.com/osery/mymodule  // HL
+go: creating new go.mod: module github.com/osery/mymodule
+$ ls  // HL
+go.mod
+$ cat go.mod  // HL
+module github.com/osery/mymodule
+
+go 1.13

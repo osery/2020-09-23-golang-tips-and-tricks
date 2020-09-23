@@ -1,0 +1,294 @@
+Golang Tips and Tricks
+23 September 2020
+
+Ondrej Sery
+osery@purestorage.com
+
+* Outline
+
+- Default Values
+- Error Handling
+- Gofmt and Friends
+- Go Modules
+- Logging
+- Retry
+- Options
+
+
+#-------------------------------------
+* Default Values
+#-------------------------------------
+
+* Simple types
+
+- All types have sensible default values
+
+.play defaults_print.go /// START/,/// END/
+
+
+* Containers
+
+.play defaults_containers.go /// START/,/// END/
+
+
+* Container Operations
+
+- Meaningful results of *read* container operations
+
+.play defaults_containers_ops.go /// START/,/// END/
+
+
+* Takeaway
+
+- Make default values useful.
+
+.play defaults_receiver.go /// START/,/// END/
+
+
+#-------------------------------------
+* Error Handling
+#-------------------------------------
+
+* Pain
+
+- Most new gophers struggle with Golang error handling...
+
+- Function signature:
+
+  func x(input) (output, error) {
+    // Some work
+    return nil, errors.New("Problem")
+  }
+
+- Call site:
+
+  out, err := x(in)
+  if err != nil {
+    // Handle, log, resolve, wrap or just forward one level up.
+  }
+
+- *Tip*of*the*day*: Don't fight, get used to it, resistance is futile.
+
+
+* Wrapping and Matching Errors
+
+  type error interface {
+      Error() string
+  }
+
+- Well known error causes:
+
+  var ErrNotFound = errors.New("resource not found")
+
+- Wrapping to give more context (since Go 1.13):
+
+  return fmt.Errorf("page %s not found: %w", page, ErrNotFound)
+
+- Check against root cause:
+
+  if errors.Is(err, ErrNotFound) {
+    // Handle not found specifically
+  }
+  if err != nil {
+    // Handle other errors
+  }
+  // Happy day scenario...
+
+
+* Takeaway
+
+- Error handling in Go is unusual, pain subsides with time.
+- No surprises, motivates handling all cases where they happen.
+- No try-catch nesting
+- Wrap known errors for more context & check by `errors.Is`.
+
+
+#-------------------------------------
+* Gofmt and Friends
+#-------------------------------------
+
+* Gofmt
+
+- `gofmt` is *the* code formatting tool for Golang:
+  _"Gofmt's_style_is_no_one's_favorite,_yet_gofmt_is_everyone's_favorite."_
+
+
+* Goimports
+
+- `gofmt` + imports grouping and ordering.
+- `goimports`: [[https://pkg.go.dev/golang.org/x/tools/cmd/goimports]]
+
+
+* Golint & Vet
+
+- Additional checks for style violations and error prone code.
+- `go`vet`: part of Golang distribution.
+- `golint`: [[https://pkg.go.dev/golang.org/x/lint/golint]]
+
+
+* Takeaway
+
+- Use the tools (automatically on each commit).
+
+
+#-------------------------------------
+* Go Modules
+#-------------------------------------
+
+* Go Modules
+
+- Support since Go 1.11, default since Go 1.13.
+- SemVer versioned code level dependencies.
+- Support for vendoring.
+
+.code modules.txt
+
+
+* go.mod and go.sum
+
+`go.mod`:
+- Module description.
+- Versions of direct dependencies (and indirect when version not implied).
+- Substitutions for development and debugging.
+
+`go.sum`:
+- Version lock with checksums of all dependencies (including indirect).
+
+
+* Hygiene
+
+- `go`mod`download`: Download all deps.
+- `go`mod`tidy`: Remove stale records and unused dependencies.
+- `go`mod`vendor`: Download all deps into the `vendor` folder.
+
+
+* Tool Dependencies
+
+- Tool reproducibility also important (`golint`, `goimports`, ...).
+- Use build-tagged import placeholder.
+
+.code tools/tools.go
+
+- Run with Go `run`:
+
+  $ go run golang.org/x/tools/cmd/goimports .
+
+
+* Takeaway
+
+- Use go modules, it is *the* dependency management in Golang (also for tools).
+- Commit *both* `go.mod` and `go.sum` for build reproducibility.
+
+
+#-------------------------------------
+* Logging
+#-------------------------------------
+
+* Zap (github.com/uber-go/zap)
+
+- Extremely configurable logger.
+- Faster zero allocation more verbose API:
+
+.play zap_fast.go /// START/,/// END/
+
+- Slower less verbose API - Sugared:
+
+.play zap_slow.go /// START/,/// END/
+
+
+* Zap (github.com/uber-go/zap)
+
+- Human friendly output:
+
+.play zap_human.go /// START/,/// END/
+
+
+* Takeaway
+
+- Zap logger is blazing fast, flexible logger.
+- Recently marked as *the* Go logger to use at Pure.
+
+
+#-------------------------------------
+* Retry (github.com/avast/retry-go)
+#-------------------------------------
+
+* Example
+
+- Let's have a randomly failing function:
+.code retry.go /// START1/,/// END1/
+
+- Call it with retries:
+.play retry.go /// START2/,/// END2/
+
+
+* Options
+
+- Delay Types: `Random`, `Fixed`, `BackOff`.
+- `RetryIf`: when to retry.
+- `OnRetry`: additional work before retry.
+- `retry.Unrecoverable(err)`:  no further retries.
+
+
+* Takeaway
+
+- Nice little library covering a lot of ground.
+- Readable and intuitive calls.
+- No more `retryCount` loops.
+
+#-------------------------------------
+* Options
+#-------------------------------------
+
+* Problem
+
+- Writing a library function, factory with a lot of options.
+
+.code options_problem.go /// START/,/// END/
+
+
+* Approaches
+
+- Many arguments and/or overloads:
+
+.code options_args.go /// START1/,/// END1/
+
+- Unreadable call site, hard to set defaults:
+
+.code options_args.go /// START2/,/// END2/
+
+
+* Approaches
+
+- Configuration structure:
+
+.code options_struct.go /// START1/,/// END1/
+
+- Somewhat readable call site, unclear defaults:
+
+.code options_struct.go /// START2/,/// END2/
+
+
+* Approaches
+
+- List of options:
+
+.code options_list.go /// START1/,/// END1/
+
+
+* Approaches
+
+- List of options:
+
+.code options_list.go /// START2/,/// END2/
+
+
+* Approaches
+
+- In `Foo`, set defaults and apply options.
+
+.code options_list.go /// START3/,/// END3/
+
+- Self explanatory call site, defaults not our problem, encapsulation:
+
+.code options_list.go /// START4/,/// END4/
